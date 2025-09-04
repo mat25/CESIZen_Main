@@ -10,22 +10,18 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: api
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # On est à la racine du repo ici
       - name: Debug repo tree
         run: |
-          pwd
-          ls -la
-          echo "---- api dir ----"
-          ls -la api || true
+          echo "PWD (repo root):"; pwd
+          echo "List repo root:"; ls -la
+          echo "List api/:"; ls -la api || true
           test -f api/pom.xml && echo "OK: api/pom.xml found" || (echo "KO: api/pom.xml missing" && exit 1)
 
       - name: Setup Java
@@ -33,27 +29,23 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: 'maven'
-          cache-dependency-path: api/pom.xml  # <— important en monorepo
+          cache: maven
+          # chemin relatif à la racine du repo
+          cache-dependency-path: api/pom.xml
 
-      - name: Build and test
+      - name: Build and test (Maven)
+        working-directory: api
         run: mvn -B -DskipTests=false verify
 
       - name: Collect artifact
         run: |
-          mkdir -p ../out
-          JAR_PATH=$(ls target/*.jar | head -n1 || true)
+          mkdir -p out
+          JAR_PATH=$(ls api/target/*.jar 2>/dev/null | head -n1 || true)
           if [ -n "$JAR_PATH" ]; then
-            cp "$JAR_PATH" ../out/app-backend.jar
+            cp "$JAR_PATH" out/app-backend.jar
           else
-            echo "(jar placeholder)" > ../out/app-backend.jar
+            echo "(jar placeholder)" > out/app-backend.jar
           fi
-
-      - name: Security dry run
-        run: echo "[DRY-RUN] OWASP Dependency-Check / CodeQL" | tee -a ../out/security-backend.txt
-
-      - name: Docker build dry run
-        run: echo "[DRY-RUN] docker build -t example.local/cesizen-backend:${GITHUB_SHA} ." | tee -a ../out/docker.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
