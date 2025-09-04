@@ -17,11 +17,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # DEBUG: verifie que le lockfile est bien present au bon chemin
+      - name: Debug lockfile path
+        run: |
+          pwd
+          ls -la
+          test -f package-lock.json && echo "OK: package-lock.json present" || (echo "KO: lockfile manquant" && exit 1)
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+          # IMPORTANT: chemin RELATIF AU REPO, pas au working-directory du job
           cache-dependency-path: CESIZen-front/package-lock.json
 
       - name: Install deps
@@ -34,14 +42,6 @@ jobs:
         run: |
           mkdir -p ../out
           tar -czf ../out/frontend-dist.tgz -C dist .
-
-      - name: Security dry run
-        run: |
-          npm audit --audit-level=high || true
-          echo "[DRY-RUN] audit done" > ../out/security-frontend.txt
-
-      - name: Docker build dry run
-        run: echo "[DRY-RUN] docker build -t example.local/cesizen-frontend:${GITHUB_SHA} ." | tee -a ../out/docker.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
