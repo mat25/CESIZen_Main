@@ -1,9 +1,9 @@
-version: "3.9"
 services:
   api:
     build: ./api
     container_name: cesizen-api
     ports: ["8080:8080"]
+
   web:
     build: ./CESIZen_front
     container_name: cesizen-front

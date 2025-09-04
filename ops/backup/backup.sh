@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 usage(){ echo "Usage: $0 [--dry-run] [--pg-url URL|--mysql-url URL] [--extra PATH]"; }
-DRY=0; PG_URL=""; MY_URL=""; EXTRA=""; NOW=$(date +%F_%H%M)
+DRY=0; PG_URL=""; MYURL=""; EXTRA=""; NOW=$(date +%F%H%M)
 while [[ $# -gt 0 ]]; do case $1 in
   --dry-run) DRY=1; shift;;
   --pg-url) PG_URL=$2; shift 2;;
   --mysql-url) MY_URL=$2; shift 2;;
   --extra) EXTRA=$2; shift 2;;
-  *) usage; exit 1;; esac; done
+  ) usage; exit 1;; esac; done
 OUT="backups/$NOW"; mkdir -p "$OUT"
-log(){ echo "[$(date +%T)] $*"; }
+log(){ echo "[$(date +%T)] $"; }
 if [[ -n $PG_URL ]]; then
   log "PostgreSQL dump"
   if [[ $DRY -eq 1 ]]; then echo "(dry-run) pg_dump $PG_URL > $OUT/db.dump" | tee "$OUT/pg.log"; else pg_dump -Fc "$PG_URL" > "$OUT/db.dump"; fi

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 usage(){ echo "Usage: $0 <backup_dir> [--pg-url URL|--mysql-url URL]"; }
-DIR=${1:-}; [[ -d $DIR ]] || { usage; exit 1; }
-PG_URL=""; MY_URL=""; shift || true
+DIR=${1:-}; [[ -d $DIR ]]  { usage; exit 1; }
+PG_URL=""; MY_URL=""; shift  true
 while [[ $# -gt 0 ]]; do case $1 in
   --pg-url) PG_URL=$2; shift 2;;
   --mysql-url) MY_URL=$2; shift 2;;

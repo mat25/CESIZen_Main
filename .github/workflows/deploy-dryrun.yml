@@ -1,0 +1,88 @@
+name: deploy-dryrun
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Env cible (demo)"
+        default: demo
+        required: true
+      dry_run:
+        description: "Dry-run ? true/false"
+        default: "true"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      
+uses: actions/checkout@v4
+
+      
+name: Build backend (JAR)
+      run: |
+        mvn -B -DskipTests -pl api -am verify
+        mkdir -p out && cp api/target/*.jar out/app-backend.jar
+
+      
+name: Build frontend (dist)
+      run: |
+        cd CESIZen_front
+        if [ -f yarn.lock ]; then corepack enable && yarn install  true && yarn build  true; \
+        elif [ -f package-lock.json ]; then npm ci  true && npm run build  true; \
+        else npm install  true && npm run build  true; fi
+        cd ..
+        mkdir -p out && tar -czf out/frontend-dist.tgz -C CESIZen_front/dist .
+
+      
+name: Upload deployables
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployables
+        path: out/*
+name: deploy-dryrun
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Env cible (demo)"
+        default: demo
+        required: true
+      dry_run:
+        description: "Dry-run ? true/false"
+        default: "true"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      
+uses: actions/checkout@v4
+
+      
+name: Build backend (JAR)
+      run: |
+        mvn -B -DskipTests -pl api -am verify
+        mkdir -p out && cp api/target/*.jar out/app-backend.jar
+
+      
+name: Build frontend (dist)
+      run: |
+        cd CESIZen_front
+        if [ -f yarn.lock ]; then corepack enable && yarn install  true && yarn build  true; \
+        elif [ -f package-lock.json ]; then npm ci  true && npm run build  true; \
+        else npm install  true && npm run build  true; fi
+        cd ..
+        mkdir -p out && tar -czf out/frontend-dist.tgz -C CESIZen_front/dist .
+
+      
+name: Upload deployables
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployables
+        path: out/*
