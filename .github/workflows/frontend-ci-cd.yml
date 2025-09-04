@@ -1,53 +1,50 @@
 name: frontend-ci-cd-dryrun
-on: { push: { branches: [develop, main] }, pull_request: {} }
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: CESIZen-front
+
     steps:
-      
-uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      
-name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'   # pas de cache => pas d'erreur si pas de lockfile
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: CESIZen-front/package-lock.json
 
-      
-name: Install deps (auto-detect yarn/npm)
-      working-directory: CESIZen_front
-      run: |
-        if [ -f yarn.lock ]; then
-          corepack enable
-          yarn install --frozen-lockfile || yarn install
-        elif [ -f package-lock.json ]; then
-          npm ci
-        else
-          npm install
-        fi
+      - name: Install deps
+        run: npm ci
 
-      
-name: Build
-      working-directory: CESIZen_front
-      run: |
-        npm run build || (mkdir -p dist && echo "dist demo" > dist/index.html)
+      - name: Build
+        run: npm run build || (mkdir -p dist && echo "dist placeholder" > dist/index.html)
 
-      
-name: Pack artefacts
-      run: |
-        mkdir -p out && tar -czf out/frontend-dist.tgz -C CESIZen_front/dist .
+      - name: Pack artifacts
+        run: |
+          mkdir -p ../out
+          tar -czf ../out/frontend-dist.tgz -C dist .
 
-      
-name: Sécu — dry run
-      run: echo "[DRY-RUN] npm audit / ESLint" | tee out/security-frontend.txt
+      - name: Security dry run
+        run: |
+          npm audit --audit-level=high || true
+          echo "[DRY-RUN] audit done" > ../out/security-frontend.txt
 
-      
-name: Docker build — dry run
-      run: echo "[DRY-RUN] docker build -t example.local/cesizen-frontend:${GITHUB_SHA} CESIZen_front" | tee -a out/docker.txt
+      - name: Docker build dry run
+        run: echo "[DRY-RUN] docker build -t example.local/cesizen-frontend:${GITHUB_SHA} ." | tee -a ../out/docker.txt
 
-      
-uses: actions/upload-artifact@v4
-      with:
-        name: frontend-dryrun-artifacts
-        path: out/*
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dryrun-artifacts
+          path: out/*
