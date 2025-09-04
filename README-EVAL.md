@@ -12,3 +12,4 @@
 - ops/backup/backup.sh --dry-run --extra CESIZen_front/dist → backups/<timestamp>
 ## Démo locale (optionnel)
 - make build && make run → front http(s)://localhost | api http://localhost:8080
+## test
