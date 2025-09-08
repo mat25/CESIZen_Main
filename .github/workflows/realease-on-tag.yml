@@ -1,69 +1,79 @@
 name: release-on-tag
+
 on:
   push:
-    tags: ["v.."]
+    # Déclenche si tu pousses un tag qui commence par v (ex: v1.0.0)
+    tags:
+      - 'v*'
+  # (optionnel) déclenchement manuel si tu veux tester sans tag
+  workflow_dispatch:
+
+permissions:
+  contents: write   # nécessaire pour créer la Release
+  packages: read
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+
     steps:
-      
-uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      
-name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: "21"
+      # ---------- BACKEND (api) ----------
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: api/pom.xml
 
-      
-name: Build backend (api)
-      run: |
-        mvn -B -DskipTests=false -pl api -am verify
-        mkdir -p out
-        if ls api/target/
-.jar >/dev/null 2>&1; then
-            cp api/target/*.jar out/app-backend.jar
+      - name: Build backend (api)
+        working-directory: api
+        run: mvn -B -DskipTests=false verify
+
+      - name: Collect backend artifact
+        run: |
+          mkdir -p out
+          JAR=$(ls api/target/*.jar | head -n1 || true)
+          if [ -n "$JAR" ]; then
+            cp "$JAR" out/app-backend.jar
           else
-            echo "(Jar d’exemple)" > out/app-backend.jar
+            echo "ERROR: aucun JAR trouvé dans api/target" >&2
+            exit 1
           fi
 
-      
-name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: "20"
+      # ---------- FRONTEND (CESIZen-front) ----------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: CESIZen-front/package-lock.json
 
-      
-name: Install deps (auto-detect yarn/npm)
-      working-directory: CESIZen_front
-      run: |
-        if [ -f yarn.lock ]; then
-          corepack enable
-          yarn install --frozen-lockfile || yarn install
-        elif [ -f package-lock.json ]; then
-          npm ci
-        else
-          npm install
-        fi
+      - name: Install deps (frontend)
+        working-directory: CESIZen-front
+        run: npm ci
 
-      
-name: Build frontend
-      working-directory: CESIZen_front
-      run: |
-        npm run build || (mkdir -p dist && echo "dist demo" > dist/index.html)
-        cd ..
-        tar -czf out/frontend-dist.tgz -C CESIZen_front/dist .
+      - name: Build frontend
+        working-directory: CESIZen-front
+        run: npm run build
 
-      
-name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        generate_release_notes: true
-        files: |
-          out/app-backend.jar
-          out/frontend-dist.tgz
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-deploy-dryrun.yml
+      - name: Pack frontend dist
+        run: |
+          mkdir -p out
+          tar -czf out/frontend-dist.tgz -C CESIZen-front/dist .
+
+      # ---------- GITHUB RELEASE ----------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            out/app-backend.jar
+            out/frontend-dist.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
