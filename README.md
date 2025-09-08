@@ -11,8 +11,8 @@ docker compose up -d
 - Frontend : http://localhost:5173
 
 ### En local
-- Backend : Java 17+, Spring Boot, Maven
-- Frontend : Node 18+, Vue 3
+- Backend : Java, Spring Boot, Maven
+- Frontend : Vue 3
 
 ## 📂 Structure
 - `/api` → Backend Spring Boot
