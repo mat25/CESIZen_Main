@@ -4,7 +4,7 @@ services:
     container_name: cesizen-mysql
     ports:
       - "3306:3306"
-    env_file: ".env"             # Doit contenir au minimum: MYSQL_ROOT_PASSWORD=password
+    env_file: ".env"            
     environment:
       - MYSQL_DATABASE=cesi_zen
       - MYSQL_ROOT_PASSWORD=password

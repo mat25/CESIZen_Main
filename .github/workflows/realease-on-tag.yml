@@ -2,14 +2,14 @@ name: release-on-tag
 
 on:
   push:
-    # Déclenche si tu pousses un tag qui commence par v (ex: v1.0.0)
+    # Déclenche si on pousses un tag qui commence par v (ex: v1.0.0)
     tags:
       - 'v*'
-  # (optionnel) déclenchement manuel si tu veux tester sans tag
+  # (optionnel) déclenchement manuel
   workflow_dispatch:
 
 permissions:
-  contents: write   # nécessaire pour créer la Release
+  contents: write 
   packages: read
 
 jobs:
