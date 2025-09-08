@@ -12,7 +12,7 @@ Avant de commencer, assurez-vous que Docker est installé sur votre machine.
 
 Avant de lancer l'environnement, vérifiez que Docker est bien en fonctionnement sur votre machine. Si Docker est déjà en cours d'exécution, passez à l'étape suivante.
 
-### Étape 2 : Positionnez-vous dans le Répertoire du Projet
+### Étape 2 : Lancer l'API dans un conteneur docker
 
 Lancez l'environnement Docker pour le Front-end :
 
@@ -28,3 +28,18 @@ Arrêtez l'environnement Docker pour le Front-end :
   docker-compose -f docker-compose.base.yml -f docker-compose.front.yml down
 ```
 
+### Étape 2 : Lancer seulement la base de données
+
+Lancez la base de données :
+
+```bash
+  docker-compose -f docker-compose.base.yml up -d
+```
+
+Lancez l'api :
+
+```bash
+  mvn spring-boot:run "-Dspring-boot.run.profiles=local"
+```
+
+Lien de la documentation de l'[API](http://localhost:8080/swagger-ui/index.html#/)
