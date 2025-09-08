@@ -1,88 +1,89 @@
 name: deploy-dryrun
+
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Env cible (demo)"
-        default: demo
+        description: "Environnement cible (ex: demo)"
+        default: "demo"
         required: true
+        type: string
       dry_run:
-        description: "Dry-run ? true/false"
+        description: "Simuler le déploiement (true/false)"
         default: "true"
         required: true
+        type: choice
+        options: [ "true", "false" ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
       DRY_RUN: ${{ inputs.dry_run }}
+      ENVIRONMENT: ${{ inputs.environment }}
+
     steps:
-      
-uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      
-name: Build backend (JAR)
-      run: |
-        mvn -B -DskipTests -pl api -am verify
-        mkdir -p out && cp api/target/*.jar out/app-backend.jar
+      # ---------- BACKEND (api) ----------
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: api/pom.xml
 
-      
-name: Build frontend (dist)
-      run: |
-        cd CESIZen_front
-        if [ -f yarn.lock ]; then corepack enable && yarn install  true && yarn build  true; \
-        elif [ -f package-lock.json ]; then npm ci  true && npm run build  true; \
-        else npm install  true && npm run build  true; fi
-        cd ..
-        mkdir -p out && tar -czf out/frontend-dist.tgz -C CESIZen_front/dist .
+      - name: Build backend (JAR)
+        working-directory: api
+        run: mvn -B -DskipTests=false verify
 
-      
-name: Upload deployables
-      uses: actions/upload-artifact@v4
-      with:
-        name: deployables
-        path: out/*
-name: deploy-dryrun
-on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Env cible (demo)"
-        default: demo
-        required: true
-      dry_run:
-        description: "Dry-run ? true/false"
-        default: "true"
-        required: true
+      - name: Collect backend artifact
+        run: |
+          mkdir -p out
+          JAR=$(ls api/target/*.jar | head -n1 || true)
+          if [ -n "$JAR" ]; then
+            cp "$JAR" out/app-backend.jar
+          else
+            echo "ERROR: aucun JAR trouvé dans api/target" >&2
+            exit 1
+          fi
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    env:
-      DRY_RUN: ${{ inputs.dry_run }}
-    steps:
-      
-uses: actions/checkout@v4
+      # ---------- FRONTEND (CESIZen-front) ----------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: CESIZen-front/package-lock.json
 
-      
-name: Build backend (JAR)
-      run: |
-        mvn -B -DskipTests -pl api -am verify
-        mkdir -p out && cp api/target/*.jar out/app-backend.jar
+      - name: Install deps (frontend)
+        working-directory: CESIZen-front
+        run: npm ci
 
-      
-name: Build frontend (dist)
-      run: |
-        cd CESIZen_front
-        if [ -f yarn.lock ]; then corepack enable && yarn install  true && yarn build  true; \
-        elif [ -f package-lock.json ]; then npm ci  true && npm run build  true; \
-        else npm install  true && npm run build  true; fi
-        cd ..
-        mkdir -p out && tar -czf out/frontend-dist.tgz -C CESIZen_front/dist .
+      - name: Build frontend
+        working-directory: CESIZen-front
+        run: npm run build
 
-      
-name: Upload deployables
-      uses: actions/upload-artifact@v4
-      with:
-        name: deployables
-        path: out/*
+      - name: Pack frontend dist
+        run: |
+          mkdir -p out
+          tar -czf out/frontend-dist.tgz -C CESIZen-front/dist .
+
+      # ---------- DRY RUN DEPLOY ----------
+      - name: Show planned deploy commands (dry-run)
+        run: |
+          echo "=== DRY-RUN: ${DRY_RUN} ==="
+          echo "Cible: ${ENVIRONMENT}"
+          echo "[SIMULATION] Copie des artefacts sur le serveur"
+          echo " - app-backend.jar  -> /opt/cesizen/api/app.jar"
+          echo " - frontend-dist.tgz-> /opt/cesizen/front/dist.tgz"
+          echo "[SIMULATION] Décompression du front et relance des services (docker compose up -d)"
+
+      # ---------- ARTEFACTS ----------
+      - name: Upload deployables
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployables-${{ inputs.environment }}
+          path: out/*
