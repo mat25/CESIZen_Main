@@ -11,6 +11,3 @@ run: check-docker
 
 stop:
     docker compose down
-
-backup:
-    bash ops/backup/backup.sh --dry-run --extra CESIZen_front/dist
