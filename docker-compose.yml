@@ -1,46 +1,49 @@
 services:
   db:
-    image: mysql:8.0
-    container_name: cesizen-db
-    environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASS}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+    image: mysql:8.4.6
+    container_name: cesizen-mysql
     ports:
       - "3306:3306"
-    volumes:
-      - dbdata:/var/lib/mysql
-    healthcheck:
-      test: ["CMD","mysqladmin","ping","-h","127.0.0.1","-uroot","-p${DB_ROOT_PASS}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  api:
-    build: ./api
-    container_name: cesizen-api
+    env_file: ".env"             # Doit contenir au minimum: MYSQL_ROOT_PASSWORD=password
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      DB_HOST: db
-      DB_USER: ${DB_USER}
-      DB_PASS: ${DB_PASS}
-      JWT_SECRET: ${JWT_SECRET}
-      CORS_ALLOWED_ORIGINS: http://localhost
+      - MYSQL_DATABASE=cesi_zen
+      - MYSQL_ROOT_PASSWORD=password
+    volumes:
+      - ./api/data/db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-ppassword"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - cesizen-net
+
+  backend:
+    build: ./api
+    container_name: cesizen-backend
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/cesi_zen?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=password
+    networks:
+      - cesizen-net
 
-  web:
-    build: ./CESIZen-front   
-    container_name: cesizen-front
+  frontend:
+    build: ./CESIZen-front
+    container_name: cesizen-frontend
     depends_on:
-      - api
+      - backend
     ports:
-      - "5173:80"            # expose le front en local sur http://localhost:5173
-    # pour 443, ajoute un vrai TLS (Let's Encrypt) avant d'ouvrir : "443:443"
+      - "8080:80"
+    networks:
+      - cesizen-net
 
-volumes:
-  dbdata:
+networks:
+  cesizen-net:
+    driver: bridge

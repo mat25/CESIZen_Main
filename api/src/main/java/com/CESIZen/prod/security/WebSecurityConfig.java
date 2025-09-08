@@ -59,6 +59,7 @@ public class WebSecurityConfig {
                         authorizeRequests
 
                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                                .requestMatchers("/health/**").permitAll()
 
                                 .requestMatchers("/auth/admin/**").hasRole("ADMIN")
                                 .requestMatchers("/auth/**").permitAll()
